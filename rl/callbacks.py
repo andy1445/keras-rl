@@ -4,6 +4,7 @@ import warnings
 import timeit
 import json
 from tempfile import mkdtemp
+import os
 
 import numpy as np
 
@@ -129,6 +130,7 @@ class TrainEpisodeLogger(Callback):
         self.actions = {}
         self.metrics = {}
         self.step = 0
+        self.header = ""
 
     def on_train_begin(self, logs):
         """ Print training values at beginning of training """
@@ -193,7 +195,36 @@ class TrainEpisodeLogger(Callback):
             'obs_max': np.max(self.observations[episode]),
             'metrics': metrics_text,
         }
-        print(template.format(**variables))
+        # print(template.format(**variables))
+
+        if self.header == "":
+            obs = np.array(self.observations[episode])
+            actions = np.array(self.actions[episode])
+            rewards =  np.array(self.rewards[episode])
+            header = ""
+            if len(obs.shape)>1: 
+                header += ",".join(['obs'+str(i) for i in range(obs.shape[1])])
+            else:
+                header +="obs"
+            header+=","
+            if len(actions.shape)>1: 
+                header += ",".join(['action'+str(i) for i in range(actions.shape[1])])
+            else:
+                header+="action"
+            header+=","
+            if len(rewards.shape)>1: 
+                header += ",".join(['reward'+str(i) for i in range(rewards.shape[1])])
+            else:
+                header += "reward"
+            self.header = header
+            # print(self.header)
+        
+        while len(os.listdir('saves/')) > 100:
+            os.remove('saves/'+sorted(os.listdir('saves/'))[0])
+        np.savetxt('saves/dqn'+str(episode)+'.csv', 
+            np.column_stack((np.array(self.observations[episode]), np.array(self.actions[episode]), np.array(self.rewards[episode])))
+        ,delimiter=',', header=self.header, comments=""
+        )
 
         # Free up resources.
         del self.episode_start[episode]
