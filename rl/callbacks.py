@@ -120,7 +120,7 @@ class TestLogger(Callback):
 
 
 class TrainEpisodeLogger(Callback):
-    def __init__(self):
+    def __init__(self, savePath):
         # Some algorithms compute multiple episodes at once since they are multi-threaded.
         # We therefore use a dictionary that is indexed by the episode to separate episodes
         # from each other.
@@ -129,8 +129,10 @@ class TrainEpisodeLogger(Callback):
         self.rewards = {}
         self.actions = {}
         self.metrics = {}
+        self.doBools = {}
         self.step = 0
         self.header = ""
+        self.savePath = savePath
 
     def on_train_begin(self, logs):
         """ Print training values at beginning of training """
@@ -150,6 +152,7 @@ class TrainEpisodeLogger(Callback):
         self.rewards[episode] = []
         self.actions[episode] = []
         self.metrics[episode] = []
+        self.doBools[episode] = []
 
     def on_episode_end(self, episode, logs):
         """ Compute and print training statistics of the episode when done """
@@ -201,6 +204,7 @@ class TrainEpisodeLogger(Callback):
             obs = np.array(self.observations[episode])
             actions = np.array(self.actions[episode])
             rewards =  np.array(self.rewards[episode])
+            bools = np.array(self.doBools[episode])
             header = ""
             if len(obs.shape)>1: 
                 header += ",".join(['obs'+str(i) for i in range(obs.shape[1])])
@@ -216,13 +220,16 @@ class TrainEpisodeLogger(Callback):
                 header += ",".join(['reward'+str(i) for i in range(rewards.shape[1])])
             else:
                 header += "reward"
+            header += ","
+            header += "do_bool"
             self.header = header
             # print(self.header)
         
-        while len(os.listdir('saves/')) > 100:
-            os.remove('saves/'+sorted(os.listdir('saves/'))[0])
-        np.savetxt('saves/dqn'+str(episode)+'.csv', 
-            np.column_stack((np.array(self.observations[episode]), np.array(self.actions[episode]), np.array(self.rewards[episode])))
+
+        while len(os.listdir(self.savePath)) > 100:
+            os.remove(self.savePath+sorted(os.listdir(self.savePath))[0])
+        np.savetxt(self.savePath+'dqn'+str(episode)+'.csv', 
+            np.column_stack((np.array(self.observations[episode]), np.array(self.actions[episode]), np.array(self.rewards[episode]), np.array(self.doBools[episode])))
         ,delimiter=',', header=self.header, comments=""
         )
 
@@ -232,6 +239,7 @@ class TrainEpisodeLogger(Callback):
         del self.rewards[episode]
         del self.actions[episode]
         del self.metrics[episode]
+        del self.doBools[episode]
 
     def on_step_end(self, step, logs):
         """ Update statistics of episode after each step """
@@ -240,6 +248,8 @@ class TrainEpisodeLogger(Callback):
         self.rewards[episode].append(logs['reward'])
         self.actions[episode].append(logs['action'])
         self.metrics[episode].append(logs['metrics'])
+        self.doBools[episode].append(logs['do_bool'])
+        
         self.step += 1
 
 

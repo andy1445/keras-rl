@@ -52,7 +52,7 @@ class Agent(object):
 
     def fit(self, env, nb_steps, action_repetition=1, callbacks=None, verbose=1,
             visualize=False, nb_max_start_steps=0, start_step_policy=None, log_interval=10000,
-            nb_max_episode_steps=None, do=None):
+            nb_max_episode_steps=None, do=None, do_epsilon=.2):
         """Trains the agent on the given environment.
 
         # Arguments
@@ -168,6 +168,19 @@ class Agent(object):
                 # This is were all of the work happens. We first perceive and compute the action
                 # (forward step) and then use the reward to improve (backward step).
                 action = self.forward(observation)
+
+                # if do, choose random action and do it accordingly
+                do_bool = False
+                if do is not None and np.random.random_sample() < do_epsilon:
+                    do_bool = True
+                    a = env.action_space.sample()
+                    if type(a) == int:
+                        action = a
+                    else:
+                        for i in do:
+                            action[i] = a[i]
+            
+
                 if self.processor is not None:
                     action = self.processor.process_action(action)
                 reward = np.float32(0)
@@ -202,6 +215,7 @@ class Agent(object):
                     'metrics': metrics,
                     'episode': episode,
                     'info': accumulated_info,
+                    'do_bool' : int(do_bool)
                 }
                 callbacks.on_step_end(episode_step, step_logs)
                 episode_step += 1
