@@ -44,12 +44,20 @@ dqn.compile(Adam(lr=1e-3), metrics=['mae'])
 # Okay, now it's time to learn something! We visualize the training here for show, but this
 # slows down training quite a lot. You can always safely abort the training prematurely using
 # Ctrl + C.
-logger = TrainEpisodeLogger('saves2/')
+
+# do = None
+do = [0]
+if do is not None:
+    logger = TrainEpisodeLogger('saves2/')
+else:
+    logger = TrainEpisodeLogger('saves/')
+
 dqn.load_weights('dqn_{}_weights.h5f'.format(ENV_NAME))
-dqn.fit(env, nb_steps=10000, visualize=False, callbacks=[logger], log_interval=1000)
+dqn.fit(env, nb_steps=1000000, visualize=False, callbacks=[logger], log_interval=1000, do=do)
 
 # After training is done, we save the final weights.
-dqn.save_weights('dqn_{}_weights.h5f'.format(ENV_NAME), overwrite=True)
+if do is None:
+    dqn.save_weights('dqn_{}_weights.h5f'.format(ENV_NAME), overwrite=True)
 
 # Finally, evaluate our algorithm for 5 episodes.
 dqn.test(env, nb_episodes=5, visualize=True)
